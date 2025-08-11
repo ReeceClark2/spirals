@@ -22,3 +22,15 @@ Task 2:
 - Use the spread of redshifts and estimated inclinations to calculate mass estimates!
 
 Compare the calculated inclinations of group 1 to the optical images of group 2. Compare the mass estimates to the mass estimates of group 1. Finally, compare the mass estimates and inclination estimates to literature values!
+
+Code required:
+- Processing and plotting spectra
+- Processing and plotting continuum
+- Comparing apparent magnitudes of galaxies
+- Fetching central redshifts of galaxies
+- Plotting Hubble diagram and measuring distance correction to get "true" galaxy sizes
+- Fetching galaxies' masses based on relative size to Andromeda
+- Calculating expected velocities for those masses
+- Comparing calculated velocities to observed velocities to retrieve inclination
+- Using horn shape feature, calculate the mass required to get those velocities after optical inclination correction
+
