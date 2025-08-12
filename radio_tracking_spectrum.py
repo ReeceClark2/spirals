@@ -6,6 +6,8 @@ from validate import Val
 import astropy.units as u
 import re
 
+import matplotlib.pyplot as plt
+
 class RadioTrackingSpectrum:
     def __init__(self, file_path: str, ifnum, plnum, including_frequency_ranges, excluding_frequency_ranges, including_time_ranges, excluding_time_ranges):
         self.filepath = file_path
@@ -13,14 +15,22 @@ class RadioTrackingSpectrum:
         with fits.open(self.filepath) as hdul:
             self.header = hdul[0].header
             self.data = Table(hdul[1].data)
+
+            # Find total number of feeds and channels
+            ifnums = np.unique(self.data['IFNUM'])
+            plnums = np.unique(self.data['PLNUM'])
+
+            # Find total number of channels
+            channel_count = len(ifnums) * len(plnums)
+
             self.data = self.data[
                 (self.data['IFNUM'] == ifnum) &
                 (self.data['PLNUM'] == plnum)
             ]
             
-            self.data_start_index = self.header["DATAIND"]
-            self.post_calibration_start_index = self.header["POSTIND"]
-            self.off_start_index = self.header["ONOFFIND"]
+            self.data_start_index = (int(self.header.get("DATAIND") / channel_count)) if self.header.get("DATAIND") is not None else None
+            self.post_calibration_start_index = (int(self.header.get("POSTIND") / channel_count)) if self.header.get("POSTIND") is not None else None
+            self.off_start_index = (int(self.header.get("ONOFFIND") / channel_count)) if self.header.get("ONOFFIND") is not None else None
 
         self.ifnum = ifnum
         self.plnum = plnum
@@ -198,11 +208,27 @@ class RadioTrackingSpectrum:
         self.filter_frequency_ranges()
 
         # Form the spectrum
-        self.spectrum = self.get_spectrum(self.data)
+        idx = np.arange(len(self.data))
+
+        # ON mask: keep everything except [off_start_index : post_calibration_start_index)
+        on_mask = ~((idx >= self.off_start_index) & (idx < self.post_calibration_start_index))
+
+        # OFF mask: keep everything except [data_start_index : off_start_index)
+        off_mask = ~((idx >= self.data_start_index) & (idx < self.off_start_index))
+
+        self.on_spectrum  = self.get_spectrum(self.data[on_mask])
+        self.off_spectrum = self.get_spectrum(self.data[off_mask])
+        
+        intensities = (self.on_spectrum[1] - self.off_spectrum[1]) / self.off_spectrum[1]
+        self.spectrum = [self.frequencies, intensities]
+        
 
 if __name__ == "__main__":
-    file = Val("filepath")
+    file = Val("C:/Users/starb/Downloads/0138370.fits")
     file.validate()
     
-    file = RadioTrackingSpectrum("filepath_validated", 0, 0, None, None, None, None)
+    file = RadioTrackingSpectrum("C:/Users/starb/Downloads/0138370_validate.fits", 0, 0, [(1421.25, 1423.25)], None, None, None)
     file.create_spectrum()
+
+    plt.plot(file.spectrum[0], file.spectrum[1])
+    plt.show()
